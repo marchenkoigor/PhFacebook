@@ -57,7 +57,8 @@
         else
             [defaults removeObjectForKey: kFBStoreTokenExpiry];
         [defaults setObject: token.permissions forKey: kFBStoreAccessPermissions];
-
+        [defaults synchronize];
+        
         [result setObject: [NSNumber numberWithBool: YES] forKey: @"valid"];
     }
     else
@@ -72,19 +73,50 @@
 
 #pragma mark Access
 
-- (void) clearToken
+- (void)clearToken
 {
     [_authToken release];
     _authToken = nil;
 }
 
--(void) invalidateCachedToken
++ (NSString*)urlencodedString:(NSString*)s {
+	NSString* result = (NSString *)CFURLCreateStringByAddingPercentEscapes(NULL,
+																		   (CFStringRef)s,
+																		   NULL,
+																		   (CFStringRef)@"!*'();:@&=+$,/?%#[]",
+																		   kCFStringEncodingUTF8);
+	return [result autorelease];
+}
+
++ (void)invalidateCachedToken
 {
-    [self clearToken];
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    
     [defaults removeObjectForKey:kFBStoreAccessToken];
     [defaults removeObjectForKey: kFBStoreTokenExpiry];
     [defaults removeObjectForKey: kFBStoreAccessPermissions];
+    [defaults synchronize];
+    
+    NSHTTPCookieStorage* cookies = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+    NSArray* facebookCookies = [cookies cookiesForURL:
+                                [NSURL URLWithString:@"http://login.facebook.com"]];
+    
+    for (NSHTTPCookie* cookie in facebookCookies) {
+        [cookies deleteCookie:cookie];
+    }
+}
+
++ (BOOL)hasStoredCachedToken {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    return [defaults stringForKey:kFBStoreAccessToken] != nil 
+        || [defaults objectForKey:kFBStoreTokenExpiry] != nil 
+        || [defaults stringForKey:kFBStoreAccessPermissions] != nil;
+}
+
+- (void)invalidateCachedToken
+{
+    [self clearToken];
+    [PhFacebook invalidateCachedToken];
 }
 
 - (void) setAccessToken: (NSString*) accessToken expires: (NSTimeInterval) tokenExpires permissions: (NSString*) perms
