@@ -258,13 +258,26 @@
             NSDictionary *result = [NSDictionary dictionaryWithObjectsAndKeys:
                 str, @"result",
                 request, @"request",
-                data, @"raw",                                    
+                data, @"raw",
+                error, @"error",
                 self, @"sender",
                 nil];
             [_delegate performSelectorOnMainThread:@selector(requestResult:) withObject: result waitUntilDone:YES];
             [str release];
         }
+    } else {
+        if ([_delegate respondsToSelector: @selector(requestResult:)])
+        {
+            NSString *request = [allParams objectForKey:@"request"];
+            NSDictionary *result = [NSDictionary dictionaryWithObjectsAndKeys:
+                                    request, @"request",
+                                    @"Dosn't have any token", @"error",
+                                    self, @"sender",
+                                    nil];
+            [_delegate performSelectorOnMainThread:@selector(requestResult:) withObject:result waitUntilDone:YES];
+        }
     }
+    
     [pool drain];
 }
 
